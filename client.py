@@ -8,6 +8,10 @@ def printMenu():
     print("3: Baixar arquivo\n")
     print("Aperte qualquer tecla para sair\n")
 
+def update():
+    #conecta com o servidor e atualiza arquivos possuídos
+    placeholder = 0
+
 def join():
     menu()
 
@@ -15,6 +19,7 @@ def search():
     menu()
 
 def download():
+    update()
     menu()
 
 def menu():
