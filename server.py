@@ -3,7 +3,7 @@ import socket
 s = socket.socket();
 print("Socket succesfully created")
 
-port = 12345
+port = 1099
 
 s.bind(('', port))
 print("Socket binded to %s" %(port))
