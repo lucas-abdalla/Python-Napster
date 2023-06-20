@@ -1,19 +1,39 @@
 import socket
+import threading
+import os
 
-s = socket.socket();
-print("Socket succesfully created")
+def join(c, addr):
+    files = []
+    while True:
+        file = c.recv(4096).decode()
+        if not file:
+            break
+        files.append(file)
+    print("Peer %s:%s adicionado com arquivos" % (addr, c.getsockname()))
+    for file in files:
+        print(" %s" % file)
+    c.send("JOIN_OK".encode())
 
+def handle_client(c, addr):
+    join(c, addr)
+    #files = []
+    #while True:
+    #    file = c.recv(4096).decode()
+    #    if not file:
+    #        break
+    #    files.append(file)
+    #print("Peer %s:%s adicionado com arquivos" % (addr, c.getsockname()))
+    #for file in files:
+    #    print(" %s" % file)
+    #c.send("JOIN_OK".encode())
+
+s = socket.socket()
 port = 1099
 
-s.bind(('', port))
-print("Socket binded to %s" %(port))
-
+s.bind(('127.0.0.1', port))
 s.listen(5)
-print("Socket is listening")
 
 while True:
     c, addr = s.accept()
-    print('Got connection from', addr)
-    c.send('Thank you for connecting'.encode())
-    c.close()
-    break
+    c_thread = threading.Thread(target=handle_client, args=(c, addr))
+    c_thread.start()
