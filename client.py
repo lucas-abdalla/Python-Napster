@@ -8,6 +8,18 @@ def printMenu():
     print("3: Baixar arquivo\n")
     print("Aperte qualquer tecla para sair\n")
 
+def menu():
+    printMenu()
+    option = int(input())
+    if option == 1:
+        join()
+    elif option == 2:
+        search()
+    elif option == 3:
+        download()
+    else:
+        s.close()
+
 def update():
     #conecta com o servidor e atualiza arquivos possuídos
     placeholder = 0
@@ -38,18 +50,6 @@ def search():
 def download():
     update()
     menu()
-
-def menu():
-    printMenu()
-    option = int(input())
-    if option == 1:
-        join()
-    elif option == 2:
-        search()
-    elif option == 3:
-        download()
-    else:
-        s.close()
         
 
 s = socket.socket()
