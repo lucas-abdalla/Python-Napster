@@ -1,69 +1,59 @@
 import socket
 import os
+import pickle
 
-def printMenu():
-    print("Escolha uma das opções digitando os números indicados:\n\n")
-    print("1: Conectar ao servidor\n")
-    print("2: Pesquisar arquivo\n")
-    print("3: Baixar arquivo\n")
-    print("Aperte qualquer tecla para sair\n")
+class peer:
 
-def update():
-    #conecta com o servidor e atualiza arquivos possuídos
-    placeholder = 0
+    def __init__(self, IP, port, path):
+        self.IP = IP
+        self.port = port
+        self.path = path
+        self.files = os.listdir(path)
 
-def join():
-    print("Peer aberto!\n")
-    print("Insira o IP do peer:\n")
-    IP = input()
-    print("Insira a porta do peer:\n")
-    port = int(input())
-    print("Insira a pasta onde quer compartilhar (enviar e baixar) arquivos:\n")
-    path = input()
-    print("Informações obtidas com sucesso!\n\n")
-    files = os.listdir(path)
-    s.connect((IP, port))
-    for file in files:
-        s.sendall(file.encode())
-    resposta = s.recv(4096).decode()
-    if (resposta == "JOIN_OK"):
-        print("Sou peer %s:%s, com arquivos" % (IP, port))
-        for file in files:
-            print(" %s" % file)
-    menu()
+    def printMenu():
+        print("Escolha uma das opções digitando os números indicados:\n")
+        print("1: Conectar ao servidor")
+        print("2: Pesquisar arquivo")
+        print("3: Baixar arquivo")
+    
+    def menu(self):
+        peer.printMenu()
+        option = int(input())
+        if option == 1:
+            self.join()
+        elif option == 2:
+            self.search()
+        elif option == 3:
+            self.download()
 
-def search():
-    menu()
+    def update():
+        #conecta com o servidor e atualiza arquivos possuídos
+        pass
 
-def download():
-    update()
-    menu()
+    def join(self):
+        s = socket.socket()
+        s.connect((self.IP, self.port))
+        data_string = pickle.dumps(self.files)
+        s.sendall(data_string)
+        resposta = s.recv(4096).decode()
+        if (resposta == "JOIN_OK"):
+            #print("Sou peer %s:%s, com arquivos " % (self.IP, s.getsockname()))
+            print(f'Sou peer {s.getsockname()[0]}:{s.getsockname()[1]} com arquivos', end = " ")
+            for file in self.files:
+                #print(" %s" % file)
+                print(file, end = " ")
+        print()
+        self.menu()
 
-def menu():
-    printMenu()
-    option = int(input())
-    if option == 1:
-        join()
-    elif option == 2:
-        search()
-    elif option == 3:
-        download()
-    else:
-        s.close()
+    def search(self):
+        self.menu()
+
+    def download(self):
+        self.update()
+        self.menu()
         
-
-s = socket.socket()
-#print("Peer aberto!\n")
-#print("Insira o IP do peer:\n")
-#IP = input()
-#print("Insira a porta do peer:\n")
-#port = int(input())
-#print("Insira a pasta onde quer compartilhar (enviar e baixar) arquivos:\n")
-#path = input()
-#print("Informações obtidas com sucesso!\n\n")
-
-menu()
-
-print(s.recv(1024).decode())
-
-s.close()
+IP = input()
+port = int(input())
+path = input()
+p = peer(IP, port, path)
+p.menu()
