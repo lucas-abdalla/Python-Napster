@@ -6,27 +6,23 @@ import pickle
 class server:
     
     s = socket.socket()
+    peerList = []
     
     def __init__(self, IP, port):
-        self.IP = IP
-        self.port = port
+        server.IP = IP
+        server.port = port
         server.s.bind((IP, port))
         server.start_server()
 
     def join(c, addr):
         files = pickle.loads(c.recv(4096))
         c_ip, c_port = c.getpeername()
-        #files = []
-        #while True:
-        #    file = c.recv(4096).decode()
-        #    if not file:
-        #        break
-        #    files.append(file)
-        #print("Peer %s:%s adicionado com arquivos" % (addr, c.getsockname()))
+        peerInfo = str(c_ip) + ";" + str(c_port) + ";"
         print(f'Peer {c_ip}:{c_port} adicionado com arquivos', end = " ")
         for file in files:
-            #print("%s" % file)
             print(file, end = " ")
+            peerInfo += file + ";"
+        server.peerList.append(peerInfo)
         print()
         c.send("JOIN_OK".encode())
 
