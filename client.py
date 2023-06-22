@@ -18,10 +18,12 @@ class peer:
 
     def join(self):
         self.s.connect((self.IP, self.port))
+        self.s.send("JOIN".encode("utf-8"))
+        self.s.recv(4096).decode("utf-8")
         data_string = pickle.dumps(self.files)
         self.s.sendall(data_string)
         resposta = self.s.recv(4096).decode()
-        if (resposta == "JOIN_OK"):
+        if resposta == "JOIN_OK":
             print(f'Sou peer {self.s.getsockname()[0]}:{self.s.getsockname()[1]} com arquivos', end = " ")
             for file in self.files:
                 print(file, end = " ")
@@ -29,7 +31,12 @@ class peer:
 
     def search(self):
         query = input()
-        self.s.sendall(query.encode())
+        self.s.send("SEARCH".encode("utf-8"))
+        self.s.recv(4096).decode("utf-8")
+        self.s.send(query.encode("utf-8"))
+        resposta = self.s.recv(4096).decode()
+        print(resposta)
+        print()
 
     def download(self):
         self.update()

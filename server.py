@@ -15,7 +15,13 @@ class server:
         server.start_server()
 
     def join(c, addr):
-        files = pickle.loads(c.recv(4096))
+        data = b''
+        while True:
+            chunk = c.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+        files = pickle.loads(data)
         c_ip, c_port = c.getpeername()
         peerInfo = str(c_ip) + ";" + str(c_port) + ";"
         print(f'Peer {c_ip}:{c_port} adicionado com arquivos', end = " ")
@@ -23,11 +29,32 @@ class server:
             print(file, end = " ")
             peerInfo += file + ";"
         server.peerList.append(peerInfo)
+        print(server.peerList)
         print()
-        c.send("JOIN_OK".encode())
+        c.send("JOIN_OK".encode("utf-8"))
+
+    def search(c, addr):
+        resposta = "peers com arquivo solicitado: "
+        query = c.recv(4096).decode("utf-8")
+        c_ip, c_port = c.getpeername()
+        print("Peer %s:%s solicitou arquivo %s" % c_ip, c_port, query)
+        print()
+        for peer in server.peerList:
+            i = 2
+            for i in range(len(peer)):
+                if (peer == query):
+                    resposta += str(peer[0]) + ":" + str(peer[1]) + " "
+        c.sendall(resposta.encode("utf-8"))
 
     def handle_client(c, addr):
         server.join(c, addr)
+        option = c.recv(4096).decode("utf-8")
+        if option == "JOIN":
+            c.send("JOIN".encode("utf-8"))
+            server.join(c, addr)
+        elif option == "SEARCH":
+            c.send("SEARCH".encode("utf-8"))
+            server.search(c, addr)
 
     def start_server():
         server.s.listen(5)
