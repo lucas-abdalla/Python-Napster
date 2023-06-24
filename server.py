@@ -48,8 +48,6 @@ class server:
             peerArr = server.peerList[i].split(';')
             if (str(c_ip) == peerArr[0] and str(c_port) == peerArr[1]):
                 server.peerList[i] += file + ";"
-            #if str(c_ip) + ";" + str(c_port) in peer:
-            #    peer += file + ";"
         c.sendall("UPDATE_OK".encode("utf-8"))
         server.handle_client(c, addr)
 
@@ -66,10 +64,6 @@ class server:
                     server.search(c, addr, data)
         except Exception as e:
             pass
-        #elif data.decode("utf-8") == "UPDATE":
-        #    server.update(c, addr, data)
-        #else:
-        #    server.search(c, addr, data)
 
     def start_server():
         server.s.listen(5)

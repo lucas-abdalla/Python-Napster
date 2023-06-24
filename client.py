@@ -52,13 +52,11 @@ class peer:
             d.sendall(query.encode("utf-8"))
             file_size = int(d.recv(4096).decode("utf-8"))
             with open(self.path + "\\" + query, "wb") as f:
-                data = d.recv(file_size)
-                f.write(data)
-                #while True:
-                #    data = d.recv(1024 * 1024)
-                #    if not data:
-                #        break
-                #    f.write(data)
+                i = 0
+                while i < file_size:
+                    data = d.recv(1024 * 1024)
+                    i += 1024 * 1024
+                    f.write(data)
                 f.close()
             d.close()
             print("Arquivo %s baixado com sucesso na pasta %s" % (query, self.path))
@@ -79,12 +77,10 @@ class peer:
                 file_size = os.path.getsize(file_path)
                 c.sendall(str(file_size).encode("utf-8"))
                 with open(file_path, "rb") as f:
-                    c.sendall(f.read(file_size))
-                    #while True:
-                    #    data = f.read(1024 * 1024)
-                    #    if not data:
-                    #        break
-                    #    c.sendall(data)
+                    i = 0
+                    while i < file_size:
+                        c.sendall(f.read(1024 * 1024))
+                        i += 1024 * 1024
                     f.close()
                 c.close()
 
