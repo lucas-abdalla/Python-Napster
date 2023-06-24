@@ -18,8 +18,6 @@ class peer:
 
     def join(self):
         self.s.connect((self.IP, self.port))
-        self.s.send("JOIN".encode("utf-8"))
-        self.s.recv(4096).decode("utf-8")
         data_string = pickle.dumps(self.files)
         self.s.sendall(data_string)
         resposta = self.s.recv(4096).decode()
@@ -31,9 +29,7 @@ class peer:
 
     def search(self):
         query = input()
-        self.s.send("SEARCH".encode("utf-8"))
-        self.s.recv(4096).decode("utf-8")
-        self.s.send(query.encode("utf-8"))
+        self.s.sendall(query.encode("utf-8"))
         resposta = self.s.recv(4096).decode()
         print(resposta)
         print()
@@ -47,7 +43,7 @@ def printMenu():
         print("2: Pesquisar arquivo (SEARCH)")
         print("3: Baixar arquivo (DOWNLOAD)")
     
-def menu():
+def menu(p):
     printMenu()
     option = int(input())
     if option == 1:
@@ -56,12 +52,14 @@ def menu():
         path = input()
         p = peer(IP, port, path)
         p.join()
-        menu()
+        menu(p)
     elif option == 2:
         p.search()
-        menu()
+        menu(p)
     elif option == 3:
         p.download()
-        menu()
+        menu(p)
 
-menu()
+global p
+p = None
+menu(p)

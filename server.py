@@ -14,13 +14,7 @@ class server:
         server.s.bind((IP, port))
         server.start_server()
 
-    def join(c, addr):
-        data = b''
-        while True:
-            chunk = c.recv(4096)
-            if not chunk:
-                break
-            data += chunk
+    def join(c, addr, data):
         files = pickle.loads(data)
         c_ip, c_port = c.getpeername()
         peerInfo = str(c_ip) + ";" + str(c_port) + ";"
@@ -29,32 +23,30 @@ class server:
             print(file, end = " ")
             peerInfo += file + ";"
         server.peerList.append(peerInfo)
-        print(server.peerList)
         print()
         c.send("JOIN_OK".encode("utf-8"))
+        server.handle_client(c, addr)
 
-    def search(c, addr):
+    def search(c, addr, data):
         resposta = "peers com arquivo solicitado: "
-        query = c.recv(4096).decode("utf-8")
+        query = data.decode("utf-8")
         c_ip, c_port = c.getpeername()
-        print("Peer %s:%s solicitou arquivo %s" % c_ip, c_port, query)
-        print()
+        print("Peer %s:%s solicitou arquivo %s" % (str(c_ip), str(c_port), query))
         for peer in server.peerList:
+            peerArr = peer.split(';')
             i = 2
-            for i in range(len(peer)):
-                if (peer == query):
-                    resposta += str(peer[0]) + ":" + str(peer[1]) + " "
+            for i in range(len(peerArr)):
+                if (peerArr[i] == query):
+                    resposta += str(peerArr[0]) + ":" + str(peerArr[1]) + " "
         c.sendall(resposta.encode("utf-8"))
+        server.handle_client(c, addr)
 
     def handle_client(c, addr):
-        server.join(c, addr)
-        option = c.recv(4096).decode("utf-8")
-        if option == "JOIN":
-            c.send("JOIN".encode("utf-8"))
-            server.join(c, addr)
-        elif option == "SEARCH":
-            c.send("SEARCH".encode("utf-8"))
-            server.search(c, addr)
+        data = c.recv(2097152)
+        if data[0] == 0x80:
+            server.join(c, addr, data)
+        else:
+            server.search(c, addr, data)
 
     def start_server():
         server.s.listen(5)
