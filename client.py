@@ -1,6 +1,7 @@
 import socket
 import os
 import pickle
+import threading
 
 class peer:
 
@@ -12,9 +13,10 @@ class peer:
         self.path = path
         self.files = os.listdir(path)
 
-    def update():
+    def update(self):
         #conecta com o servidor e atualiza arquivos possuídos
-        pass
+        self.s.sendall("UPDATE".encode("utf-8"))
+        self.s.sendall(query.encode("utf-8"))
 
     def join(self):
         self.s.connect((self.IP, self.port))
@@ -26,8 +28,11 @@ class peer:
             for file in self.files:
                 print(file, end = " ")
         print()
+        standby_thread = threading.Thread(target=self.standbyD, args=())
+        standby_thread.start()
 
     def search(self):
+        global query
         query = input()
         self.s.sendall(query.encode("utf-8"))
         resposta = self.s.recv(4096).decode()
@@ -35,7 +40,48 @@ class peer:
         print()
 
     def download(self):
-        self.update()
+        IP = input()
+        port = int(input())
+        d = socket.socket()
+        d.connect((IP, port))
+        if query:
+            d.sendall(query.encode("utf-8"))
+            file_size = int(d.recv(4096).decode("utf-8"))
+            with open(self.path + "\\" + query, "wb") as f:
+                data = d.recv(file_size)
+                f.write(data)
+                #while True:
+                #    data = d.recv(1024 * 1024)
+                #    if not data:
+                #        break
+                #    f.write(data)
+                f.close()
+            d.close()
+            print("Arquivo %s baixado com sucesso na pasta %s" % (query, self.path))
+            print()
+            self.update()
+        else:
+            print("Não foi possível baixar pois uma pesquisa por arquivo não foi feita")
+    
+    def standbyD(self):
+        sbD = socket.socket()
+        sbD.bind((self.s.getsockname()[0], self.s.getsockname()[1]))
+        sbD.listen(5)
+        while True:
+            c, addr = sbD.accept()
+            request = c.recv(4096).decode()
+            file_path = os.path.join(self.path, request)
+            file_size = os.path.getsize(file_path)
+            c.sendall(str(file_size).encode("utf-8"))
+            with open(file_path, "rb") as f:
+                c.sendall(f.read(file_size))
+                #while True:
+                #    data = f.read(1024 * 1024)
+                #    if not data:
+                #        break
+                #    c.sendall(data)
+                f.close()
+            c.close()
 
 def printMenu():
         print("Escolha uma das opções digitando os números indicados:\n")
