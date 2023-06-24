@@ -17,6 +17,10 @@ class peer:
         #conecta com o servidor e atualiza arquivos possuídos
         self.s.sendall("UPDATE".encode("utf-8"))
         self.s.sendall(query.encode("utf-8"))
+        resposta = self.s.recv(4096).decode("utf-8")
+        while True:
+            if resposta == "UPDATE_OK":
+                break
 
     def join(self):
         self.s.connect((self.IP, self.port))
@@ -70,18 +74,19 @@ class peer:
         while True:
             c, addr = sbD.accept()
             request = c.recv(4096).decode()
-            file_path = os.path.join(self.path, request)
-            file_size = os.path.getsize(file_path)
-            c.sendall(str(file_size).encode("utf-8"))
-            with open(file_path, "rb") as f:
-                c.sendall(f.read(file_size))
-                #while True:
-                #    data = f.read(1024 * 1024)
-                #    if not data:
-                #        break
-                #    c.sendall(data)
-                f.close()
-            c.close()
+            if request in self.files:
+                file_path = os.path.join(self.path, request)
+                file_size = os.path.getsize(file_path)
+                c.sendall(str(file_size).encode("utf-8"))
+                with open(file_path, "rb") as f:
+                    c.sendall(f.read(file_size))
+                    #while True:
+                    #    data = f.read(1024 * 1024)
+                    #    if not data:
+                    #        break
+                    #    c.sendall(data)
+                    f.close()
+                c.close()
 
 def printMenu():
         print("Escolha uma das opções digitando os números indicados:\n")

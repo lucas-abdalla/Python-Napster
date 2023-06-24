@@ -50,19 +50,22 @@ class server:
                 server.peerList[i] += file + ";"
             #if str(c_ip) + ";" + str(c_port) in peer:
             #    peer += file + ";"
+        c.sendall("UPDATE_OK".encode("utf-8"))
         server.handle_client(c, addr)
 
     def handle_client(c, addr):
-        data = c.recv(2097152)
-        if data[0] == 0x80:
-            server.join(c, addr, data)
-        else:
-            aux = data.decode("utf-8")
-            if aux == "UPDATE":
-                print("Entrou no if")
-                server.update(c, addr)
+        try:
+            data = c.recv(2097152)
+            if data[0] == 0x80:
+                server.join(c, addr, data)
             else:
-                server.search(c, addr, data)
+                aux = data.decode("utf-8")
+                if aux == "UPDATE":
+                    server.update(c, addr)
+                else:
+                    server.search(c, addr, data)
+        except Exception as e:
+            pass
         #elif data.decode("utf-8") == "UPDATE":
         #    server.update(c, addr, data)
         #else:
