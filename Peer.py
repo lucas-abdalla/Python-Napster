@@ -80,7 +80,7 @@ class Peer:
             #Abre arquivo no modo escrita na pasta path do peer
             with open(self.path + "\\" + query, "wb") as f:
                 i = 0
-                #Recebe os dados em pedaços de 0,5MB até que atinge o tamanho do arquivo
+                #Recebe os dados em pedaços de 1MB até que atinge o tamanho do arquivo
                 while i < file_size:
                     data = d.recv(1024 * 1024)
                     #Usado para controlar quantos bytes já foram recebidos
@@ -118,7 +118,7 @@ class Peer:
                 #Abre arquivo no modo read
                 with open(file_path, "rb") as f:
                     i = 0
-                    #Similar ao download, envia o arquivo solicitado em pedações de 0,5MB
+                    #Similar ao download, envia o arquivo solicitado em pedações de 1MB
                     while i <= file_size:
                         c.sendall(f.read(1024 * 1024))
                         i += (1024 * 1024)
