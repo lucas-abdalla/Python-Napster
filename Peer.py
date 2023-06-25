@@ -119,7 +119,7 @@ class Peer:
                 with open(file_path, "rb") as f:
                     i = 0
                     #Similar ao download, envia o arquivo solicitado em pedações de 1MB
-                    while i <= file_size:
+                    while i < file_size:
                         c.sendall(f.read(1024 * 1024))
                         i += (1024 * 1024)
                     #Fecha arquivo
