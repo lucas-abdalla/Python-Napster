@@ -7,6 +7,9 @@ class Peer:
 
     #Cria um socket para a classe Peer
     s = socket.socket()
+    #Global para poder ser utilizada no download e update futuramente
+    global query
+    query = ""
 
     #Inicializa o peer com as informações capturadas do teclado e obtem sua lista de arquivos
     def __init__(self, IP, port, path):
@@ -33,28 +36,31 @@ class Peer:
 
     #Função JOIN do peer
     def join(self):
-        #Conecta ao servidor
-        self.s.connect((self.IP, self.port))
-        #Usa módulo pickle do Python para codificar o vetor de arquivos do peer em bytes
-        data_string = pickle.dumps(self.files)
-        #Envia o vetor de arquivos em bytes
-        self.s.sendall(data_string)
-        #Recebe o JOIN_OK
-        resposta = self.s.recv(4096).decode()
-        if resposta == "JOIN_OK":
-            #Printa conforme especificação
-            print(f'Sou peer {self.s.getsockname()[0]}:{self.s.getsockname()[1]} com arquivos', end = " ")
-            for file in self.files:
-                print(file, end = " ")
-        print()
-        #Após dar JOIN no servidor, cria uma thread que escutará requisições de download vindas de outros peers
-        standby_thread = threading.Thread(target=self.standbyD, args=())
-        standby_thread.start()
+        #Tenta se conectar ao servidor
+        try:
+            #Conecta ao servidor
+            self.s.connect((self.IP, self.port))
+            #Usa módulo pickle do Python para codificar o vetor de arquivos do peer em bytes
+            data_string = pickle.dumps(self.files)
+            #Envia o vetor de arquivos em bytes
+            self.s.sendall(data_string)
+            #Recebe o JOIN_OK
+            resposta = self.s.recv(4096).decode()
+            if resposta == "JOIN_OK":
+                #Printa conforme especificação
+                print(f'Sou peer {self.s.getsockname()[0]}:{self.s.getsockname()[1]} com arquivos', end = " ")
+                for file in self.files:
+                    print(file, end = " ")
+            print()
+            #Após dar JOIN no servidor, cria uma thread que escutará requisições de download vindas de outros peers
+            standby_thread = threading.Thread(target=self.standbyD, args=())
+            standby_thread.start()
+        #Acusa o erro caso não tenha sido possível se conectar
+        except Exception:
+            print("Não foi possível se conectar ao servidor. Ele pode estar offline ou os dados foram digitados incorretamente")
 
     #Função SEARCH do peer
     def search(self):
-        #Global para poder ser utilizada no download e update futuramente
-        global query
         query = input()
         #Envia query ao servidor
         self.s.sendall(query.encode("utf-8"))
@@ -66,17 +72,18 @@ class Peer:
     #Função DOWNLOAD do peer
     def download(self):
         #Verifica se foi feita uma pesquisa antes de baixar
-        if query in globals():
-            #Recebe IP e porta do peer ao qual fará a requisição
-            IP = input()
-            port = int(input())
-            #Abre um novo socket para fazer a requisição de download
-            d = socket.socket()
+        #Recebe IP e porta do peer ao qual fará a requisição
+        IP = input()
+        port = int(input())
+        #Abre um novo socket para fazer a requisição de download
+        d = socket.socket()
+        #Tenta se conectar ao peer
+        try:
             d.connect((IP, port))
-            #Se foi feita uma pesquisa por arquivo ao servidor prossegue com a requisição
             #Envia o nome do arquivo requisitado ao outro peer
             d.sendall(query.encode("utf-8"))
             ans = d.recv(4096).decode("utf-8")
+            #Verifica se o peer possui mesmo o arquivo solicitado
             if ans == "FILE_FOUND":
             #Recebe o tamanho do arquivo requisitado
                 file_size = int(d.recv(4096).decode("utf-8"))
@@ -100,8 +107,9 @@ class Peer:
                 self.update()
             else:
                 print("O peer requisitado não possui o último arquivo pesquisado")
-        else:
-            print("Não foi feita uma busca por arquivo antes de requisitar um download")
+        #Caso não consiga se conectar
+        except Exception:
+            print("Não foi possível se conectar ao peer digitado. O peer pode estar offline ou os dados foram digitados incorretamente")
     
     #Função stand by download, que escuta requisições de downloads vindas de outros peers. Funciona numa thread separada criada no JOIN
     def standbyD(self):
@@ -159,8 +167,14 @@ def menu(p):
         IP = input()
         port = int(input())
         path = input()
-        #Inicializa peer
-        p = Peer(IP, port, path)
+        #Tenta criar o peer
+        try:
+            #Inicializa peer
+            p = Peer(IP, port, path)
+        #Nesse ponto a única exception possível é um path errado
+        except Exception:
+            print("Não foi possível criar o peer. Verifique se o caminho da pasta foi digitado corretamente")
+            menu(p)
         #Chama função JOIN
         p.join()
         menu(p)
