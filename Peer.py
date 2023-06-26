@@ -72,19 +72,16 @@ class Peer:
             #Abre um novo socket para fazer a requisição de download
             d = socket.socket()
             d.connect((IP, port))
-            #Se foi feita uma pesquisa por arquivo ao servidor prossegue com a requisição
             #Envia o nome do arquivo requisitado ao outro peer
             d.sendall(query.encode("utf-8"))
-            #Recebe o tamanho do arquivo requisitado
-            file_size = int(d.recv(4096).decode("utf-8"))
             #Abre arquivo no modo escrita na pasta path do peer
             with open(self.path + "\\" + query, "wb") as f:
-                i = 0
-                #Recebe os dados em pedaços de 1MB até que atinge o tamanho do arquivo
-                while i < file_size:
-                    data = d.recv(1024 * 1024)
-                    #Usado para controlar quantos bytes já foram recebidos
-                    i += (1024 * 1024)
+                while True:
+                    #Recebe os dados em pedaçoes de 64kb
+                    data = d.recv(64000)
+                    #Se não há dados sai do loop
+                    if not data:
+                        break
                     f.write(data)
                 #Fecha o arquivo
                 f.close()
@@ -109,7 +106,7 @@ class Peer:
             #Aceita conexão e recebe a requisição
             c, addr = sbD.accept()
             #Cria thread para enviar arquivo para poder cuidar de vários downloads
-            sendfile_thread = threading.Thread(target=self.sendfile, args=(self, c, addr))
+            sendfile_thread = threading.Thread(target=self.sendfile, args=(c, addr))
             sendfile_thread.start()
             
 
@@ -119,17 +116,15 @@ class Peer:
         if request in self.files:
             #Cria um path com o nome do arquivo solicitado
             file_path = os.path.join(self.path, request)
-            #Utiliza o path criado acima para obter tamanho do arquivo solicitado
-            file_size = os.path.getsize(file_path)
-            #Manda o tamanho do arquivo solicitado ao outro peer
-            c.sendall(str(file_size).encode("utf-8"))
             #Abre arquivo no modo read
             with open(file_path, "rb") as f:
-                i = 0
-                #Similar ao download, envia o arquivo solicitado em pedações de 1MB
-                while i < file_size:
-                    c.sendall(f.read(1024 * 1024))
-                    i += (1024 * 1024)
+                #Similar ao download, envia o arquivo solicitado em pedações de 64kb
+                while True:
+                    data = f.read(64000)
+                    #Se não há dados sai do loop
+                    if not data:
+                        break
+                    c.sendall(data)
                 #Fecha arquivo
                 f.close()
             #Fecha conexão com o outro peer
