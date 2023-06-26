@@ -7,9 +7,6 @@ class Peer:
 
     #Cria um socket para a classe Peer
     s = socket.socket()
-    #Global para poder ser utilizada no download e update futuramente
-    global query
-    query = ""
 
     #Inicializa o peer com as informações capturadas do teclado e obtem sua lista de arquivos
     def __init__(self, IP, port, path):
@@ -36,31 +33,28 @@ class Peer:
 
     #Função JOIN do peer
     def join(self):
-        #Tenta se conectar ao servidor
-        try:
-            #Conecta ao servidor
-            self.s.connect((self.IP, self.port))
-            #Usa módulo pickle do Python para codificar o vetor de arquivos do peer em bytes
-            data_string = pickle.dumps(self.files)
-            #Envia o vetor de arquivos em bytes
-            self.s.sendall(data_string)
-            #Recebe o JOIN_OK
-            resposta = self.s.recv(4096).decode()
-            if resposta == "JOIN_OK":
-                #Printa conforme especificação
-                print(f'Sou peer {self.s.getsockname()[0]}:{self.s.getsockname()[1]} com arquivos', end = " ")
-                for file in self.files:
-                    print(file, end = " ")
-            print()
-            #Após dar JOIN no servidor, cria uma thread que escutará requisições de download vindas de outros peers
-            standby_thread = threading.Thread(target=self.standbyD, args=())
-            standby_thread.start()
-        #Acusa o erro caso não tenha sido possível se conectar
-        except Exception:
-            print("Não foi possível se conectar ao servidor. Ele pode estar offline ou os dados foram digitados incorretamente")
+        #Conecta ao servidor
+        self.s.connect((self.IP, self.port))
+        #Usa módulo pickle do Python para codificar o vetor de arquivos do peer em bytes
+        data_string = pickle.dumps(self.files)
+        #Envia o vetor de arquivos em bytes
+        self.s.sendall(data_string)
+        #Recebe o JOIN_OK
+        resposta = self.s.recv(4096).decode()
+        if resposta == "JOIN_OK":
+            #Printa conforme especificação
+            print(f'Sou peer {self.s.getsockname()[0]}:{self.s.getsockname()[1]} com arquivos', end = " ")
+            for file in self.files:
+                print(file, end = " ")
+        print()
+        #Após dar JOIN no servidor, cria uma thread que escutará requisições de download vindas de outros peers
+        standby_thread = threading.Thread(target=self.standbyD, args=())
+        standby_thread.start()
 
     #Função SEARCH do peer
     def search(self):
+        #Global para poder ser utilizada no download e update futuramente
+        global query
         query = input()
         #Envia query ao servidor
         self.s.sendall(query.encode("utf-8"))
@@ -71,45 +65,35 @@ class Peer:
 
     #Função DOWNLOAD do peer
     def download(self):
-        #Verifica se foi feita uma pesquisa antes de baixar
-        #Recebe IP e porta do peer ao qual fará a requisição
-        IP = input()
-        port = int(input())
-        #Abre um novo socket para fazer a requisição de download
-        d = socket.socket()
-        #Tenta se conectar ao peer
-        try:
+        if query:
+            #Recebe IP e porta do peer ao qual fará a requisição
+            IP = input()
+            port = int(input())
+            #Abre um novo socket para fazer a requisição de download
+            d = socket.socket()
             d.connect((IP, port))
             #Envia o nome do arquivo requisitado ao outro peer
             d.sendall(query.encode("utf-8"))
-            ans = d.recv(4096).decode("utf-8")
-            #Verifica se o peer possui mesmo o arquivo solicitado
-            if ans == "FILE_FOUND":
-            #Recebe o tamanho do arquivo requisitado
-                file_size = int(d.recv(4096).decode("utf-8"))
-                #Abre arquivo no modo escrita na pasta path do peer
-                with open(self.path + "\\" + query, "wb") as f:
-                    i = 0
-                    #Recebe os dados em pedaços de 1MB até que atinge o tamanho do arquivo
-                    while i < file_size:
-                        data = d.recv(1024 * 1024)
-                        #Usado para controlar quantos bytes já foram recebidos
-                        i += (1024 * 1024)
-                        f.write(data)
-                    #Fecha o arquivo
-                    f.close()
-                #Fecha a conexão com o peer requisitado
-                d.close()
-                #Print conforme especificação
-                print("Arquivo %s baixado com sucesso na pasta %s" % (query, self.path))
-                print()
-                #Chama a função update
-                self.update()
-            else:
-                print("O peer requisitado não possui o último arquivo pesquisado")
-        #Caso não consiga se conectar
-        except Exception:
-            print("Não foi possível se conectar ao peer digitado. O peer pode estar offline ou os dados foram digitados incorretamente")
+            #Abre arquivo no modo escrita na pasta path do peer
+            with open(self.path + "\\" + query, "wb") as f:
+                while True:
+                    #Recebe os dados em pedaçoes de 64kb
+                    data = d.recv(64000)
+                    #Se não há dados sai do loop
+                    if not data:
+                        break
+                    f.write(data)
+                #Fecha o arquivo
+                f.close()
+            #Fecha a conexão com o peer requisitado
+            d.close()
+            #Print conforme especificação
+            print("Arquivo %s baixado com sucesso na pasta %s" % (query, self.path))
+            print()
+            #Chama a função update
+            self.update()
+        else:
+            print("Não foi feita uma busca por arquivo antes de requisitar um download")
     
     #Função stand by download, que escuta requisições de downloads vindas de outros peers. Funciona numa thread separada criada no JOIN
     def standbyD(self):
@@ -121,34 +105,30 @@ class Peer:
         while True:
             #Aceita conexão e recebe a requisição
             c, addr = sbD.accept()
-            #Manda a requisição para uma thread nova para poder receber requisições de outros peers
-            sendfile_thread = threading.Thread(target=self.sendFile, args=(c, addr))
+            #Cria thread para enviar arquivo para poder cuidar de vários downloads
+            sendfile_thread = threading.Thread(target=self.sendfile, args=(c, addr))
             sendfile_thread.start()
+            
 
-    def sendFile(self, c, addr):
+    def sendfile(self, c, addr):
         request = c.recv(4096).decode()
         #Se possui o arquivo requisitado...
         if request in self.files:
-            c.sendall("FILE_FOUND".encode("utf-8"))
             #Cria um path com o nome do arquivo solicitado
             file_path = os.path.join(self.path, request)
-            #Utiliza o path criado acima para obter tamanho do arquivo solicitado
-            file_size = os.path.getsize(file_path)
-            #Manda o tamanho do arquivo solicitado ao outro peer
-            c.sendall(str(file_size).encode("utf-8"))
             #Abre arquivo no modo read
             with open(file_path, "rb") as f:
-                i = 0
-                #Similar ao download, envia o arquivo solicitado em pedações de 1MB
-                while i < file_size:
-                    c.sendall(f.read(1024 * 1024))
-                    i += (1024 * 1024)
+                #Similar ao download, envia o arquivo solicitado em pedações de 64kb
+                while True:
+                    data = f.read(64000)
+                    #Se não há dados sai do loop
+                    if not data:
+                        break
+                    c.sendall(data)
                 #Fecha arquivo
                 f.close()
             #Fecha conexão com o outro peer
             c.close()
-        else:
-            c.sendall("NO_SUCH_FILE".encode("utf-8"))
 
 #Função simples que printa o menu interativo no console
 def printMenu():
@@ -167,14 +147,8 @@ def menu(p):
         IP = input()
         port = int(input())
         path = input()
-        #Tenta criar o peer
-        try:
-            #Inicializa peer
-            p = Peer(IP, port, path)
-        #Nesse ponto a única exception possível é um path errado
-        except Exception:
-            print("Não foi possível criar o peer. Verifique se o caminho da pasta foi digitado corretamente")
-            menu(p)
+        #Inicializa peer
+        p = Peer(IP, port, path)
         #Chama função JOIN
         p.join()
         menu(p)
