@@ -66,7 +66,7 @@ class Peer:
     #Função DOWNLOAD do peer
     def download(self):
         #Verifica se foi feita uma pesquisa antes de baixar
-        if query:
+        if query in globals():
             #Recebe IP e porta do peer ao qual fará a requisição
             IP = input()
             port = int(input())
@@ -76,26 +76,30 @@ class Peer:
             #Se foi feita uma pesquisa por arquivo ao servidor prossegue com a requisição
             #Envia o nome do arquivo requisitado ao outro peer
             d.sendall(query.encode("utf-8"))
+            ans = d.recv(4096).decode("utf-8")
+            if ans == "FILE_FOUND":
             #Recebe o tamanho do arquivo requisitado
-            file_size = int(d.recv(4096).decode("utf-8"))
-            #Abre arquivo no modo escrita na pasta path do peer
-            with open(self.path + "\\" + query, "wb") as f:
-                i = 0
-                #Recebe os dados em pedaços de 1MB até que atinge o tamanho do arquivo
-                while i < file_size:
-                    data = d.recv(1024 * 1024)
-                    #Usado para controlar quantos bytes já foram recebidos
-                    i += (1024 * 1024)
-                    f.write(data)
-                #Fecha o arquivo
-                f.close()
-            #Fecha a conexão com o peer requisitado
-            d.close()
-            #Print conforme especificação
-            print("Arquivo %s baixado com sucesso na pasta %s" % (query, self.path))
-            print()
-            #Chama a função update
-            self.update()
+                file_size = int(d.recv(4096).decode("utf-8"))
+                #Abre arquivo no modo escrita na pasta path do peer
+                with open(self.path + "\\" + query, "wb") as f:
+                    i = 0
+                    #Recebe os dados em pedaços de 1MB até que atinge o tamanho do arquivo
+                    while i < file_size:
+                        data = d.recv(1024 * 1024)
+                        #Usado para controlar quantos bytes já foram recebidos
+                        i += (1024 * 1024)
+                        f.write(data)
+                    #Fecha o arquivo
+                    f.close()
+                #Fecha a conexão com o peer requisitado
+                d.close()
+                #Print conforme especificação
+                print("Arquivo %s baixado com sucesso na pasta %s" % (query, self.path))
+                print()
+                #Chama a função update
+                self.update()
+            else:
+                print("O peer requisitado não possui o último arquivo pesquisado")
         else:
             print("Não foi feita uma busca por arquivo antes de requisitar um download")
     
@@ -117,6 +121,7 @@ class Peer:
         request = c.recv(4096).decode()
         #Se possui o arquivo requisitado...
         if request in self.files:
+            c.sendall("FILE_FOUND".encode("utf-8"))
             #Cria um path com o nome do arquivo solicitado
             file_path = os.path.join(self.path, request)
             #Utiliza o path criado acima para obter tamanho do arquivo solicitado
@@ -134,6 +139,8 @@ class Peer:
                 f.close()
             #Fecha conexão com o outro peer
             c.close()
+        else:
+            c.sendall("NO_SUCH_FILE".encode("utf-8"))
 
 #Função simples que printa o menu interativo no console
 def printMenu():
