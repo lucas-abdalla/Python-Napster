@@ -65,14 +65,14 @@ class Peer:
 
     #Função DOWNLOAD do peer
     def download(self):
-        #Recebe IP e porta do peer ao qual fará a requisição
-        IP = input()
-        port = int(input())
-        #Abre um novo socket para fazer a requisição de download
-        d = socket.socket()
-        d.connect((IP, port))
-        #Se foi feita uma pesquisa por arquivo ao servidor prossegue com a requisição
         if query:
+            #Recebe IP e porta do peer ao qual fará a requisição
+            IP = input()
+            port = int(input())
+            #Abre um novo socket para fazer a requisição de download
+            d = socket.socket()
+            d.connect((IP, port))
+            #Se foi feita uma pesquisa por arquivo ao servidor prossegue com a requisição
             #Envia o nome do arquivo requisitado ao outro peer
             d.sendall(query.encode("utf-8"))
             #Recebe o tamanho do arquivo requisitado
@@ -95,6 +95,8 @@ class Peer:
             print()
             #Chama a função update
             self.update()
+        else:
+            print("Não foi feita uma busca por arquivo antes de requisitar um download")
     
     #Função stand by download, que escuta requisições de downloads vindas de outros peers. Funciona numa thread separada criada no JOIN
     def standbyD(self):
