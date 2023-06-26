@@ -108,26 +108,32 @@ class Peer:
         while True:
             #Aceita conexão e recebe a requisição
             c, addr = sbD.accept()
-            request = c.recv(4096).decode()
-            #Se possui o arquivo requisitado...
-            if request in self.files:
-                #Cria um path com o nome do arquivo solicitado
-                file_path = os.path.join(self.path, request)
-                #Utiliza o path criado acima para obter tamanho do arquivo solicitado
-                file_size = os.path.getsize(file_path)
-                #Manda o tamanho do arquivo solicitado ao outro peer
-                c.sendall(str(file_size).encode("utf-8"))
-                #Abre arquivo no modo read
-                with open(file_path, "rb") as f:
-                    i = 0
-                    #Similar ao download, envia o arquivo solicitado em pedações de 1MB
-                    while i < file_size:
-                        c.sendall(f.read(1024 * 1024))
-                        i += (1024 * 1024)
-                    #Fecha arquivo
-                    f.close()
-                #Fecha conexão com o outro peer
-                c.close()
+            #Cria thread para enviar arquivo para poder cuidar de vários downloads
+            sendfile_thread = threading.Thread(target=self.sendfile, args=(self, c, addr))
+            sendfile_thread.start()
+            
+
+    def sendfile(self, c, addr):
+        request = c.recv(4096).decode()
+        #Se possui o arquivo requisitado...
+        if request in self.files:
+            #Cria um path com o nome do arquivo solicitado
+            file_path = os.path.join(self.path, request)
+            #Utiliza o path criado acima para obter tamanho do arquivo solicitado
+            file_size = os.path.getsize(file_path)
+            #Manda o tamanho do arquivo solicitado ao outro peer
+            c.sendall(str(file_size).encode("utf-8"))
+            #Abre arquivo no modo read
+            with open(file_path, "rb") as f:
+                i = 0
+                #Similar ao download, envia o arquivo solicitado em pedações de 1MB
+                while i < file_size:
+                    c.sendall(f.read(1024 * 1024))
+                    i += (1024 * 1024)
+                #Fecha arquivo
+                f.close()
+            #Fecha conexão com o outro peer
+            c.close()
 
 #Função simples que printa o menu interativo no console
 def printMenu():
